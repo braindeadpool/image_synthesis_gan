@@ -19,6 +19,8 @@ class Generator:
         self.mu = 0    # normal distribution mean
         self.sigma = 1    # normal distribution std
         self.verbose = verbose
+        self._model = None
+        self._build_model()
 
     @property
     def session(self):
@@ -36,7 +38,7 @@ class Generator:
         samples[:, self.attribute_size] = np.rint(samples[:, self.attribute_size])
         return samples
 
-    def model(self):
+    def _build_model(self):
         """
         tensorflow graph model of the generator network
         :return:
@@ -44,14 +46,14 @@ class Generator:
         fc0_std = 0.2  # std of random initialization for fc0 matrix
         fc0_shape = [4, 4, 1024]  # shape of the fc0 reshaped output (for batch size = 1)
         fc0_size = fc0_shape[0] * fc0_shape[1] * fc0_shape[2]  # size of the fc0 output
-        input_data = tf.placeholder(tf.float32, [None, self.input_size], name=self.nid + "_input")
+        self._input_data = tf.placeholder(tf.float32, [None, self.input_size], name=self.nid + "_input")
         # project and reshape the input array - basically an fc layer doing matrix multiplication and bias addition
         with tf.variable_scope(self.nid+"fc0"):
             W = tf.get_variable("W", shape=[self.input_size, fc0_size], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
             b = tf.get_variable("b", shape=[fc0_size], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
-            fc0_output = tf.reshape(tf.matmul(input_data, W) + b, [-1] + fc0_shape)
+            fc0_output = tf.reshape(tf.matmul(self._input_data, W) + b, [-1] + fc0_shape)
 
         fsconv_input = fc0_output  # initial fsconv input is the output of the fc layer
 
@@ -66,17 +68,23 @@ class Generator:
 
         # create the intermediate fsconv layers
         for output_shape in output_shapes:
-            with tf.variable_scope(self.nid+"_fsconv-{}x{}".format(filter_shape[0], filter_shape[1])):
-                W = tf.get_variable("W", shape=filter_shape+[output_shape[2]]+[fsconv_input.get_shape().as_list()[-1]],
-                                    initializer=tf.truncated_normal(filter_shape, stddev=0.1))
+            with tf.variable_scope(self.nid+"_fsconv-{}x{}".format(output_shape[0], output_shape[1])):
+                W_shape = filter_shape+[output_shape[2]]+[fsconv_input.get_shape().as_list()[-1]]
+                W = tf.get_variable("W", initializer=tf.truncated_normal(W_shape, stddev=0.1))
                 # fractionally-strided convolution network
-                fsconv = tf.nn.relu(tf.nn.conv2d_transpose(fsconv_input, W, output_shape=output_shape, strides=[2, 2]))
+                fsconv = tf.nn.conv2d_transpose(fsconv_input, W, output_shape=[-1]+output_shape, strides=[1, 2, 2, 1])
+                fsconv = tf.nn.relu(fsconv)     # apply relu layer
             fsconv_input = fsconv
-        return fsconv
+        self._model = fsconv
 
+    def eval(self, input_data):
+        with self._session:
+            return self._model.eval(feed_dict={self._input_data: input_data})
+
+    def batch_train(self):
+        pass
 
 if __name__ == '__main__':
     g = Generator()
     print(g.generate_samples(10))
-    x = g.model()
-    g.session().run(x)
+    g.eval(g.generate_samples(10))

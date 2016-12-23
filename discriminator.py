@@ -2,30 +2,19 @@
 from tfmodel import *
 
 
-class Generator(TFModel):
+class Discriminator(TFModel):
     """
-    Generator network
+    Discriminator network
     """
-    def __init__(self, session=None, nid="g", verbose=True):
+
+    def __init__(self, session=None, nid="d", verbose=True):
         super().__init__(session, nid, verbose)
-        self.noise_size = 10   # noise vector size
+        self.noise_size = 10  # noise vector size
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
-        self.mu = 0    # normal distribution mean
-        self.sigma = 1    # normal distribution std
+        self.mu = 0  # normal distribution mean
+        self.sigma = 1  # normal distribution std
         self._build_model()
-
-    def generate_samples(self, num_samples=100):
-        """
-        samples from a random distribution to generate a attribute+noise vector encoding
-        :num_samples: number of vector samples to generate
-        :return:
-        """
-        samples = self.mu + np.random.randn(num_samples, self.input_size) * self.sigma
-        # convert the attribute vector to binary representation
-        samples[:, self.attribute_size] /= self.sigma
-        samples[:, self.attribute_size] = np.rint(samples[:, self.attribute_size])
-        return samples
 
     def _build_model(self):
         """
@@ -75,5 +64,4 @@ class Generator(TFModel):
 
 if __name__ == '__main__':
     # create generator and test some methods
-    g = Generator()
-    print(g.generate_samples(10))
+    d = Discriminator()

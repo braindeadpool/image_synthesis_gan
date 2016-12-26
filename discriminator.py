@@ -23,11 +23,9 @@ class Discriminator(TFModel):
 
         # filter's first 2 dimensions, the rest two are auto computed
         filter_shape = [5, 5]
-
         # generate output shapes for each conv layer
         output_shapes = [[int(self.input_size[0]/2**x), int(self.input_size[1]/2**x), int(32 * 2 ** x)]
                          for x in range(1, 5)]
-
         # add final fc layer output shape
         output_shapes.append([1, 1, 1])
         if self.verbose:

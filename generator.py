@@ -8,11 +8,12 @@ class Generator(TFModel):
     """
     Generator network
     """
-    def __init__(self, session=None, nid="g", noise_size=10, verbose=True):
+    def __init__(self, session=None, nid="g", noise_size=10, output_size=[128, 128, 3], verbose=True):
         super().__init__(session, nid, verbose)
         self.noise_size = noise_size   # noise vector size
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
+        self.output_size = output_size  # output image size
         self.mu = 0    # normal distribution mean
         self.sigma = 1    # normal distribution std
         self._build_model()
@@ -51,11 +52,12 @@ class Generator(TFModel):
         # filter's first 2 dimensions, the rest two are auto computed
         filter_shape = [5, 5]
         # generate output shapes for each fsconv layer
-        output_shapes = [[int(2 ** x), int(2 ** x), int(fc0_shape[2] * 4 / (2 ** x))] for x in range(3, 7)]
+        output_shapes = [[int(2 ** x), int(2 ** x), int(fc0_shape[2] * 4 / (2 ** x))]
+                         for x in range(3, 10) if int(2**x) <= np.min(self.output_size[:2])]
+        # set the last output shape to be 3-channeled (or as required by the model)
+        output_shapes[-1][2] = self.output_size[2]
         if self.verbose:
             print("FSConv layer output shapes - {}".format(output_shapes))
-        # set the last output shape to be 3-channeled
-        output_shapes[-1][2] = 3
 
         # create the intermediate fsconv layers
         for output_shape in output_shapes:

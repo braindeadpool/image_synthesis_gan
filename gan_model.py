@@ -4,13 +4,18 @@ from discriminator import *
 
 
 class GANModel(TFModel):
-    def __init__(self, session=None, nid="gan", verbose=True):
+    def __init__(self, session=None, nid="gan", image_size=[128, 128, 3],verbose=True):
         super().__init__(session, nid, verbose)
-        self._generator = Generator(self._session, verbose=verbose)
-        self._discriminator = Discriminator(self._session, verbose=verbose)
+        self._generator = Generator(self._session, output_size=image_size, verbose=verbose)
+        self._discriminator = Discriminator(self._session, input_size=image_size, verbose=verbose)
 
     def generate_samples(self, num_samples=100):
         return self._generator.generate_samples(num_samples)
+
+    def _build_model(self):
+        # add the loss function layer
+        
+        return
 
     def batch_train(self, batch_input):
         self._initialize_variables()

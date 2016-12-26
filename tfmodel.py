@@ -1,6 +1,4 @@
 #!/usr/bin/evn python
-import utils
-import numpy as np
 import tensorflow as tf
 
 
@@ -17,6 +15,10 @@ class TFModel(object):
     @property
     def session(self):
         return self._session
+
+    @property
+    def model(self):
+        return self._model
 
     def _build_model(self):
         pass

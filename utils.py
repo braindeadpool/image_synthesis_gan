@@ -11,6 +11,15 @@ data_directory = os.path.join(base_directory, 'data', 'sun_db')
 attribute_size = 102   # default attribute vector length
 
 
+def is_power_of_2(num):
+    """
+    check's if the number is a power of 2
+    :param num:
+    :return: True/False
+    """
+    return num is not 0 and not (num & (num - 1))
+
+
 def cprint(*args):
     """
     custom print wrapper

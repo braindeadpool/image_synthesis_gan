@@ -3,10 +3,11 @@ from generator import *
 from discriminator import *
 
 
-class GANModel(object):
-    def __init__(self):
-        self._generator = Generator()
-        self._discriminator = Discriminator()
+class GANModel(TFModel):
+    def __init__(self, session=None, nid="gan", verbose=True):
+        super().__init__(session, nid, verbose)
+        self._generator = Generator(self._session, verbose=verbose)
+        self._discriminator = Discriminator(self._session, verbose=verbose)
 
     def generate_samples(self, num_samples=100):
         return self._generator.generate_samples(num_samples)

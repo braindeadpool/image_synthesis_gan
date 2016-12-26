@@ -1,4 +1,6 @@
 #!/usr/bin/evn python
+import utils
+import numpy as np
 from tfmodel import *
 
 
@@ -6,9 +8,9 @@ class Generator(TFModel):
     """
     Generator network
     """
-    def __init__(self, session=None, nid="g", verbose=True):
+    def __init__(self, session=None, nid="g", noise_size=10, verbose=True):
         super().__init__(session, nid, verbose)
-        self.noise_size = 10   # noise vector size
+        self.noise_size = noise_size   # noise vector size
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
         self.mu = 0    # normal distribution mean

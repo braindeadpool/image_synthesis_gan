@@ -1,5 +1,6 @@
 #!/usr/bin/evn python
 import utils
+import addons
 import numpy as np
 from tfmodel import *
 
@@ -9,8 +10,8 @@ class Discriminator(TFModel):
     Discriminator network
     """
 
-    def __init__(self, session=None, nid="d", input_size=[64, 64, 3], verbose=True):
-        super().__init__(session, nid, verbose)
+    def __init__(self, session=None, nid="d", input_size=[64, 64, 3], verbose=True, reuse=False):
+        super().__init__(session, nid, verbose, reuse)
         self.input_size = input_size
         self._build_model()
 
@@ -27,11 +28,14 @@ class Discriminator(TFModel):
         output_shapes = [[int(self.input_size[0]/2**x), int(self.input_size[1]/2**x), int(32 * 2 ** x)]
                          for x in range(1, 5)]
         # add final fc layer output shape
-        output_shapes.append([1, 1, 1])
-        if self.verbose:
+        output_shapes.append([1, 1, utils.attribute_size])
+        if self._verbose:
             print("Conv layer output shapes - {}".format(output_shapes))
 
         conv_input = self._input_data
+        # reuse variables if specified
+        if self._reuse:
+            tf.get_variable_scope().reuse_variables()
 
         # create the conv layers
         for output_shape in output_shapes:
@@ -40,7 +44,7 @@ class Discriminator(TFModel):
                 W = tf.get_variable("W", initializer=tf.truncated_normal(W_shape, stddev=0.1))
                 # convolution network
                 conv = tf.nn.conv2d(conv_input, W, strides=[1, 2, 2, 1], padding='SAME')
-                conv = tf.nn.relu(conv)     # apply relu layer
+                conv = addons.leaky_relu(conv, 0.2)     # apply relu layer
             conv_input = conv
 
         self._model = conv

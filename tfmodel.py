@@ -3,12 +3,13 @@ import tensorflow as tf
 
 
 class TFModel(object):
-    def __init__(self, session=None, nid="tfm", verbose=True):
+    def __init__(self, session=None, nid="tfm", verbose=True, reuse=False):
         if not session:
             session = tf.Session()
         self._session = session
         self.nid = nid    # network id string
-        self.verbose = verbose
+        self._verbose = verbose
+        self._reuse = reuse
         self._model = None
         self._is_initialized = False  # are the variables already initialized?
 

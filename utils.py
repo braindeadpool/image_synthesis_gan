@@ -6,6 +6,8 @@ from scipy.io import loadmat
 verbose = True  # print all debug messages
 base_directory = os.path.curdir
 data_directory = os.path.join(base_directory, 'data', 'sun_db')
+learning_rate = 0.001  # ADAM optimizer learning rate
+beta1 = 0.1  # ADAM optimizer beta1
 
 # Variables for later usage
 attribute_size = 102   # default attribute vector length

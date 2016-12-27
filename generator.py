@@ -8,8 +8,8 @@ class Generator(TFModel):
     """
     Generator network
     """
-    def __init__(self, session=None, nid="g", noise_size=10, output_size=[128, 128, 3], verbose=True):
-        super().__init__(session, nid, verbose)
+    def __init__(self, session=None, nid="g", noise_size=10, output_size=[128, 128, 3], verbose=True, reuse=False):
+        super().__init__(session, nid, verbose, reuse)
         self.noise_size = noise_size   # noise vector size
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
@@ -56,7 +56,7 @@ class Generator(TFModel):
                          for x in range(3, 10) if int(2**x) <= np.min(self.output_size[:2])]
         # set the last output shape to be 3-channeled (or as required by the model)
         output_shapes[-1][2] = self.output_size[2]
-        if self.verbose:
+        if self._verbose:
             print("FSConv layer output shapes - {}".format(output_shapes))
 
         # create the intermediate fsconv layers

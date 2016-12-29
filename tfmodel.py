@@ -12,6 +12,7 @@ class TFModel(object):
         self._reuse = reuse
         self._model = None
         self._is_initialized = False  # are the variables already initialized?
+        self._input_data = None  # placeholder for input data - None in tfmodel
 
     @property
     def session(self):
@@ -31,3 +32,6 @@ class TFModel(object):
             init = tf.initialize_all_variables()
             self._session.run(init)
             self._is_initialized = True
+
+    def set_input(self, input_variable):
+        self._input_data.assign(input_variable)

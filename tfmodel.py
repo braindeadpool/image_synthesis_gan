@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 class TFModel(object):
-    def __init__(self, session=None, nid="tfm", verbose=True, reuse=False):
+    def __init__(self, session=None, nid="tfm", input_data = None, verbose=True, reuse=False):
         if not session:
             session = tf.Session()
         self._session = session
@@ -12,7 +12,7 @@ class TFModel(object):
         self._reuse = reuse
         self._model = None
         self._is_initialized = False  # are the variables already initialized?
-        self._input_data = None  # placeholder for input data - None in tfmodel
+        self._input_data = input_data
 
     @property
     def session(self):
@@ -21,6 +21,10 @@ class TFModel(object):
     @property
     def model(self):
         return self._model
+
+    @property
+    def input_data(self):
+        return self._input_data
 
     def _build_model(self):
         pass
@@ -32,6 +36,3 @@ class TFModel(object):
             init = tf.initialize_all_variables()
             self._session.run(init)
             self._is_initialized = True
-
-    def set_input(self, input_variable):
-        self._input_data.assign(input_variable)

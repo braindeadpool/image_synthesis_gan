@@ -10,8 +10,8 @@ class Discriminator(TFModel):
     Discriminator network
     """
 
-    def __init__(self, session=None, nid="d", input_size=[64, 64, 3], verbose=True, reuse=False):
-        super().__init__(session, nid, verbose, reuse)
+    def __init__(self, session=None, nid="d", input_data=None, input_size=[64, 64, 3], verbose=True, reuse=False):
+        super().__init__(session, nid, input_data, verbose, reuse)
         self.input_size = input_size
         self._build_model()
 
@@ -20,8 +20,11 @@ class Discriminator(TFModel):
         tensorflow graph model of the discriminator network
         :return:
         """
-        # placeholder for input data
-        self._input_data = tf.placeholder(tf.float32, [None]+self.input_size, name=self.nid + "_input")
+        # if input is not a variable connecting the discriminator to another network (ex, generator output),
+        # initialize a placeholder
+        if self._input_data is None:
+            # placeholder for input data
+            self._input_data = tf.placeholder(tf.float32, [None]+self.input_size, name=self.nid + "_input")
 
         # filter's first 2 dimensions, the rest two are auto computed
         filter_shape = [5, 5]

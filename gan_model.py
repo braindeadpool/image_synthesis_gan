@@ -7,12 +7,13 @@ tf.logging.set_verbosity(tf.logging.INFO)
 class GANModel(TFModel):
     def __init__(self, session=None, nid="gan", image_size=[128, 128, 3], verbose=True):
         super().__init__(session, nid, verbose)
+        self._image_size = image_size
         # initialize a generator
-        self._generator = Generator(self._session, output_size=image_size, verbose=verbose)
+        self._generator = None
         # we need a discriminator object for each w, r, f dataset - all reuse variables
-        self._discriminator_w = Discriminator(self._session, input_size=image_size, verbose=verbose, reuse=False)
-        self._discriminator_r = Discriminator(self._session, input_size=image_size, verbose=verbose, reuse=True)
-        self._discriminator_f = Discriminator(self._session, input_size=image_size, verbose=verbose, reuse=True)
+        self._discriminator_w = None
+        self._discriminator_r = None
+        self._discriminator_f = None
         self._input_data_s_w = None  # real image data but wth incorrect attributes
         self._input_data_s_w_attributes = None  # corresponding incorrect attributes
         self._input_data_s_r = None  # real image with correct attributes
@@ -27,31 +28,34 @@ class GANModel(TFModel):
     def _build_model(self):
         # add the loss function layer
         self._input_data_s_w = tf.placeholder(tf.float32,
-                                              [None]+self._discriminator_w.input_size, name=self.nid + "_input_s_w")
+                                              [None]+self._image_size, name=self.nid + "_input_s_w")
         self._input_data_s_w_attributes = tf.placeholder(tf.float32,
                                               [None, utils.attribute_size], name=self.nid + "_input_s_w_a")
         self._input_data_s_r = tf.placeholder(tf.float32,
-                                              [None] + self._discriminator_r.input_size, name=self.nid + "_input_s_r")
+                                              [None] + self._image_size, name=self.nid + "_input_s_r")
         self._input_data_s_r_attributes = tf.placeholder(tf.float32,
                                                          [None, utils.attribute_size], name=self.nid + "_input_s_r_a")
-        self._input_data_g = tf.placeholder(tf.float32,
-                                            [None, self._generator.input_size], name=self.nid + "_input_g")
-        # set the inputs for the generator and discriminators
-        self._generator.set_input(self._input_data_g)
+
+        # initialize a generator
+        self._generator = Generator(self._session, output_size=self._image_size, verbose=self._verbose)
+        # we need a discriminator object for each w, r, f dataset - all reuse variables
+        self._discriminator_w = Discriminator(self._session, input_data=self._input_data_s_w,
+                                              input_size=self._image_size, verbose=self._verbose, reuse=False)
+        self._discriminator_r = Discriminator(self._session, input_data=self._input_data_s_r,
+                                              input_size=self._image_size, verbose=self._verbose, reuse=True)
+        self._discriminator_f = Discriminator(self._session, input_data=self._generator.model,
+                                              input_size=self._image_size, verbose=self._verbose, reuse=True)
 
         # score is measured as the similarity between discriminator predicted attribute vector
         # and the input attribute vector
         # generator/discriminator.model = score for the input passed
-        self._discriminator_w.set_input(self._input_data_s_w)
         s_w = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_w.model,
                                                                      self._input_data_s_w_attributes))
-        self._discriminator_r.set_input(self._input_data_s_r)
         s_r = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_r.model,
                                                                      self._input_data_s_r_attributes))
-        self._discriminator_f.set_input(self._generator.model)
         # we slice the input to generator to separate out only the attribute vector component (ie ignore the noise part)
         s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            self._discriminator_f.model, tf.slice(self._input_data_g, [0, self._generator.noise_size], [-1, -1])))
+            self._discriminator_f.model, tf.slice(self._generator.input_data, [0, self._generator.noise_size], [-1, -1])))
 
         # now define the discriminator loss
         d_loss = tf.log(s_r) + (tf.log(1-s_w) + tf.log(1-s_f))/2
@@ -97,7 +101,7 @@ class GANModel(TFModel):
                                                batch_input['images_s_r_attributes']
                                            })
                     session.run([self._g_optimizer],
-                                feed_dict={self._input_data_g: self.generate_samples(utils.batch_size)})
+                                feed_dict={self._generator.input_data: self.generate_samples(utils.batch_size)})
 
 
 def batch_generator(batch_id=0):

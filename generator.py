@@ -8,8 +8,8 @@ class Generator(TFModel):
     """
     Generator network
     """
-    def __init__(self, session=None, nid="g", noise_size=10, output_size=[128, 128, 3], verbose=True, reuse=False):
-        super().__init__(session, nid, verbose, reuse)
+    def __init__(self, session=None, nid="g", input_data=None, noise_size=10, output_size=[128, 128, 3], verbose=True, reuse=False):
+        super().__init__(session, nid, input_data, verbose, reuse)
         self.noise_size = noise_size   # noise vector size
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
@@ -39,8 +39,11 @@ class Generator(TFModel):
         fc0_shape = [4, 4, 1024]  # shape of the fc0 reshaped output (for batch size = 1)
         fc0_size = fc0_shape[0] * fc0_shape[1] * fc0_shape[2]  # size of the fc0 output
 
-        # placeholder for input data
-        self._input_data = tf.placeholder(tf.float32, [None, self.input_size], name=self.nid + "_input")
+        # if input is not a variable connecting the discriminator to another network (ex, generator output),
+        # initialize a placeholder
+        if self._input_data is None:
+            # placeholder for input data
+            self._input_data = tf.placeholder(tf.float32, [None, self.input_size], name=self.nid + "_input")
 
         # project and reshape the input array - basically an fc layer doing matrix multiplication and bias addition
         with tf.variable_scope(self.nid+"_fc0"):

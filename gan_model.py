@@ -49,20 +49,20 @@ class GANModel(TFModel):
         # score is measured as the similarity between discriminator predicted attribute vector
         # and the input attribute vector
         # generator/discriminator.model = score for the input passed
-        s_w = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_w.model,
+        self._s_w = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_w.model,
                                                                      self._input_data_s_w_attributes))
-        s_r = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_r.model,
+        self._s_r = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_r.model,
                                                                      self._input_data_s_r_attributes))
         # we slice the input to generator to separate out only the attribute vector component (ie ignore the noise part)
-        s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        self._s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             self._discriminator_f.model, tf.slice(self._generator.input_data,
                                                   [0, 0], [-1, self._generator.attribute_size])))
 
         # now define the discriminator loss
-        d_loss = tf.log(s_r) + (tf.log(1-s_w) + tf.log(1-s_f))/2
+        self._d_loss = tf.log(self._s_r) - (tf.log(self._s_w) + tf.log(self._s_f))/2
 
         # now define the generator loss
-        g_loss = tf.log(s_f)
+        self._g_loss = tf.log(self._s_f)
 
         # get all trainable variables and separate them into discriminator and generator variables
         t_vars = tf.trainable_variables()
@@ -71,20 +71,19 @@ class GANModel(TFModel):
 
         # add the optimizers
         self._d_optimizer = tf.train.AdamOptimizer(utils.learning_rate,
-                                                   beta1=utils.beta1).minimize(d_loss, var_list=d_vars)
+                                                   beta1=utils.beta1).minimize(self._d_loss, var_list=d_vars)
         self._g_optimizer = tf.train.AdamOptimizer(utils.learning_rate,
-                                                   beta1=utils.beta1).minimize(g_loss, var_list=g_vars)
+                                                   beta1=utils.beta1).minimize(self._g_loss, var_list=g_vars)
 
         # create the summary variables for logging and visualization
-        s_w_summary = tf.summary.scalar("s_w", s_w, "Discriminator score with real data but incorrect attributes")
-        s_r_summary = tf.summary.scalar("s_r", s_r, "Discriminator score with real data and correct attributes")
-        s_f_summary = tf.summary.scalar("s_f", s_f, "Discriminator score with fake data and attributes")
-        d_loss_summary = tf.summary.scalar("discriminator_loss",
-                                           d_loss,
-                                           "The loss function tried to minimize by the discriminator network")
-        g_loss_summary = tf.summary.scalar("generator_loss",
-                                           d_loss,
-                                           "The loss function tried to minimize by the generator network")
+        s_w_summary = tf.scalar_summary("s_w", self._s_w)
+        s_r_summary = tf.scalar_summary("s_r", self._s_r)
+        s_f_summary = tf.scalar_summary("s_f", self._s_f)
+        d_loss_summary = tf.scalar_summary("discriminator_loss",
+                                           self._d_loss)
+        g_loss_summary = tf.scalar_summary("generator_loss",
+                                           self._g_loss)
+        g_output = tf.image_summary("generator_output", self._generator.model, max_images=10)
 
         # uncomment if you have upgraded tensorflow to 0.12 and above
         # self._d_summary = tf.summary.merge([d_loss_summary, s_w_summary, s_f_summary, s_r_summary])
@@ -92,12 +91,18 @@ class GANModel(TFModel):
         # self._summary_writer = tf.summary.FileWriter(utils.summary_directory)
 
         self._d_summary = tf.merge_summary([d_loss_summary, s_w_summary, s_f_summary, s_r_summary])
-        self._g_summary = tf.merge_summary([g_loss_summary, s_f_summary])
+        self._g_summary = tf.merge_summary([g_loss_summary, s_f_summary, g_output])
 
         # initialize the summary writer
         self._summary_writer = tf.train.SummaryWriter(utils.summary_directory, graph=self._session.graph)
 
+        # initialize the saver
+        self._saver = tf.train.Saver(t_vars, max_to_keep=2)
+
         return self._g_optimizer, self._d_optimizer
+
+    def eval(self, input_data):
+        return self._d_loss.eval(feed_dict=input_data), self._g_loss.eval(feed_dict=input_data)
 
     def train(self, batch_generator, num_epochs=1, num_batches=10):
         """
@@ -134,23 +139,28 @@ class GANModel(TFModel):
                                      batch_input['images_s_r_attributes'],
                                  self._generator.input_data: g_input
                                  }
-                    summary, _ = session.run([self._d_summary,
-                                              self._d_optimizer],
-                                             feed_dict=feed_dict)
+                    summary, d_opt, g_loss, d_loss = session.run([self._d_summary,
+                                                                  self._d_optimizer, self._g_loss, self._d_loss],
+                                                                 feed_dict=feed_dict)
                     self._summary_writer.add_summary(summary, batch_id)
                     if self._verbose:
                         print("Discriminator trained")
 
-                    summary, _ = session.run([self._g_summary, self._g_optimizer],
-                                             feed_dict=feed_dict)
+                    summary, g_opt, g_loss, d_loss = session.run([self._g_summary,
+                                                                  self._g_optimizer, self._g_loss, self._d_loss],
+                                                                 feed_dict=feed_dict)
                     self._summary_writer.add_summary(summary, batch_id)
                     if self._verbose:
                         print("Generator trained")
 
                     g_output = self._generator.eval(g_input)
-                    utils.save_output(g_output, 'g_output_{}_{}'.format(epoch, batch_num))
+                    utils.save_output(g_output, g_input, 'g_output_{}_{}'.format(epoch, batch_num))
 
-            self._summary_writer.flush()
+                    if self._verbose:
+                        print("Discriminator loss = {}".format(d_loss))
+                        print("Generator loss = {}".format(g_loss))
+
+            self._saver.save(session, 'model', global_step=num_epochs)
             self._summary_writer.close()
 
 
@@ -174,4 +184,4 @@ if __name__ == '__main__':
 
     # load the dataset into global variables
     utils.load_sun_db(dir_location="./data/sun_db")
-    gan.train(batch_generator, 1, 1)
+    gan.train(batch_generator, 1, 10)

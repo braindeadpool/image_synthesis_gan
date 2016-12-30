@@ -69,8 +69,7 @@ class Discriminator(TFModel):
 
     def eval(self, input_data):
         self._initialize_variables()
-        with self._session:
-            return self._model.eval(feed_dict={self._input_data: input_data})
+        return self._model.eval(feed_dict={self._input_data: input_data})
 
 
 if __name__ == '__main__':

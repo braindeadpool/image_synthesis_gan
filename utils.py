@@ -64,19 +64,32 @@ def get_images(image_locations, size=[256, 256, 3], base_dir=data_directory):
 def save_output(image_data, input_vector, filename):
     """
     saves the generator output image and the input vector used to generate it
-    :param image_data:
-    :param input_vector:
+    :param image_data: 4-D or 3-D tensor representing batch of RGB images or RGB images
+    :param input_vector: 2-D or 1-D tensor representing batch of attribute vectors or attribute vector
     :param filename: filename without extensions
-    :return: filename.png and filename.npy will be saved
+    :return: filename_{batch_num}.png and filename_{batch_num}.npy will be saved
     """
     basename = os.path.join(output_directory, filename)
-    imsave(basename+'.png', image_data)
-    np.save(basename+'.npy', input_vector)
-    attribute_vector = input_vector[:attribute_size]
-    np.savetxt(basename+'.txt', attributes[np.nonzero(attribute_vector)])
 
-    if verbose:
-        print("Saved output to {0}.png , {0}.npy , {0}.txt".format(basename))
+    if len(image_data.shape) == 3:
+        imsave(basename+'.png', image_data)
+        np.save(basename+'.npy', input_vector)
+        attribute_vector = input_vector[:attribute_size]
+        np.savetxt(basename+'.txt', attributes[np.nonzero(attribute_vector)])
+
+        if verbose:
+            print("Saved output to {0}.png , {0}.npy , {0}.txt".format(basename))
+
+    elif len(image_data.shape) == 4:
+        for i in range(image_data.shape[0]):
+            imsave(basename + '_{}.png'.format(i), image_data[i, :, :, :])
+            np.save(basename + '_{}.npy'.format(i), input_vector[i, :])
+            attribute_vector = input_vector[i, :][:attribute_size]
+            with open(basename + '_{}.txt'.format(i), 'w') as f:
+                for j in attributes[np.nonzero(attribute_vector)]:
+                    f.write(j[0]+'\n')
+            if verbose:
+                print("Saved output to {0}_{1}.png , {0}_{1}.npy , {0}_{1}.txt".format(basename, i))
 
 
 def load_sun_db(dir_location="./data/sun_db"):
@@ -98,13 +111,13 @@ def load_sun_db(dir_location="./data/sun_db"):
     # load the dataset
     images = loadmat(os.path.join(dir_location, images_file))['images'][:, 0]
     image_attributes = loadmat(os.path.join(dir_location, image_attributes_labeled_file))['labels_cv']
+    image_attributes = np.rint(image_attributes)  # convert to 0/1 representation
     attributes = loadmat(os.path.join(dir_location, attributes_file))['attributes'][:, 0]
     attribute_size = attributes.size
 
     # split the dataset
     images = images[:training_data_size]
-    attributes = attributes[:training_data_size]
-    image_attributes = image_attributes[:training_data_size]
+    image_attributes = image_attributes[:training_data_size, :]
 
     return images, attributes, image_attributes
 

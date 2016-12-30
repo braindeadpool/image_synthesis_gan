@@ -14,8 +14,7 @@ class Generator(TFModel):
         self.attribute_size = utils.attribute_size
         self.input_size = self.attribute_size + self.noise_size  # final input vector size
         self.output_size = output_size  # output image size
-        self.mu = 0    # normal distribution mean
-        self.sigma = 1    # normal distribution std
+        self.sample_range = [0, 1]   # normal distribution range
         self._build_model()
 
     def generate_samples(self, num_samples=100):
@@ -24,10 +23,10 @@ class Generator(TFModel):
         :num_samples: number of vector samples to generate
         :return:
         """
-        samples = self.mu + np.random.randn(num_samples, self.input_size) * self.sigma
-        # convert the attribute vector to binary representation
-        samples[:, self.attribute_size] /= self.sigma
-        samples[:, self.attribute_size] = np.rint(samples[:, self.attribute_size])
+        samples = np.random.random_sample((num_samples, self.input_size))
+        samples[:, self.attribute_size:] *= (self.sample_range[1] - self.sample_range[0]) + self.sample_range[0]
+        # convert the attribute vector part to 0/1 representation
+        samples[:, :self.attribute_size] = np.rint(samples[:, :self.attribute_size])
         return samples
 
     def _build_model(self):
@@ -91,12 +90,11 @@ class Generator(TFModel):
 
     def eval(self, input_data):
         self._initialize_variables()
-        with self._session:
-            return self._model.eval(feed_dict={self._input_data: input_data})
+        return self._model.eval(feed_dict={self._input_data: input_data})
 
 
 if __name__ == '__main__':
     # create generator and test some methods
     g = Generator()
-    samples = g.generate_samples(10)
+    samples = g.generate_samples(2)
     print(samples)

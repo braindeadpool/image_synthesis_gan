@@ -29,6 +29,9 @@ class TFModel(object):
     def _build_model(self):
         pass
 
+    def eval(self):
+        pass
+
     def _initialize_variables(self):
         # initialize the variables if not done already
         if not self._is_initialized:

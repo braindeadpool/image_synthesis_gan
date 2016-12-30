@@ -50,19 +50,21 @@ class GANModel(TFModel):
         # and the input attribute vector
         # generator/discriminator.model = score for the input passed
         self._s_w = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_w.model,
-                                                                     self._input_data_s_w_attributes))
+                                                                           self._input_data_s_w_attributes))
         self._s_r = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_r.model,
-                                                                     self._input_data_s_r_attributes))
+                                                                           self._input_data_s_r_attributes))
         # we slice the input to generator to separate out only the attribute vector component (ie ignore the noise part)
         self._s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
             self._discriminator_f.model, tf.slice(self._generator.input_data,
                                                   [0, 0], [-1, self._generator.attribute_size])))
 
-        # now define the discriminator loss
-        self._d_loss = tf.log(self._s_r) - (tf.log(self._s_w) + tf.log(self._s_f))/2
+        # now define the discriminator and generator losses
+        # self._d_loss = tf.log(self._s_r) - (tf.log(self._s_w) + tf.log(self._s_f))/2
+        # self._g_loss = tf.log(self._s_f)
 
-        # now define the generator loss
-        self._g_loss = tf.log(self._s_f)
+        # alternate loss functions
+        self._d_loss = self._s_r - self._s_w - self._s_f
+        self._g_loss = self._s_f
 
         # get all trainable variables and separate them into discriminator and generator variables
         t_vars = tf.trainable_variables()
@@ -97,7 +99,7 @@ class GANModel(TFModel):
         self._summary_writer = tf.train.SummaryWriter(utils.summary_directory, graph=self._session.graph)
 
         # initialize the saver
-        self._saver = tf.train.Saver(t_vars, max_to_keep=2)
+        self._saver = tf.train.Saver(t_vars, max_to_keep=utils.max_no_of_saves)
 
         return self._g_optimizer, self._d_optimizer
 
@@ -160,7 +162,7 @@ class GANModel(TFModel):
                         print("Discriminator loss = {}".format(d_loss))
                         print("Generator loss = {}".format(g_loss))
 
-            self._saver.save(session, 'model', global_step=num_epochs)
+                self._saver.save(session, 'model', global_step=epoch)
             self._summary_writer.close()
 
 
@@ -213,5 +215,8 @@ if __name__ == '__main__':
     # test the random batch generator
     # batch_input = random_batch_generator(0)
 
+    # print the parameters
+    utils.print_parameters()
+
     gan = GANModel(image_size=utils.image_size)
-    gan.train(random_batch_generator, 1, 10)
+    gan.train(random_batch_generator, utils.num_epochs, utils.num_batches)

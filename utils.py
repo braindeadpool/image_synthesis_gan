@@ -13,16 +13,20 @@ summary_directory = os.path.join(base_directory, 'summary')
 output_directory = os.path.join(base_directory, 'output')
 
 # - training parameters
-learning_rate = 0.001  # ADAM optimizer learning rate
+learning_rate = 0.0005  # ADAM optimizer learning rate
 beta1 = 0.1  # ADAM optimizer beta1
+num_epochs = 50
+num_batches = 10
+max_no_of_saves = 1
 
 # - dataset parameters
-training_data_size = 30
-batch_size = 10
-image_size = [64, 64, 3]
+training_data_size = 10000
+batch_size = 20
+image_size = [128, 128, 3]
 
 # - variables for later usage
 attribute_size = 102   # default attribute vector length
+noise_size = 10
 
 # Globally accessible dataset location specifiers
 images = None
@@ -48,6 +52,25 @@ def cprint(*args):
     if verbose:
         print(args)
 
+
+def print_parameters():
+    if verbose:
+        print("Parameters\n"
+              "---------------------\n"
+              "learning_rate = {}\n"
+              "beta1 = {}\n"
+              "---------------------\n"
+              "training_data_size = {}\n"
+              "batch_size = {}\n"
+              "num_epochs = {}\n"
+              "num_batches = {}\n"
+              "max_no_of_saves = {}\n"
+              "---------------------\n"
+              "image_size = {}\n"
+              "attribute_size = {}\n"
+              "noise_size = {}".format(learning_rate, beta1, training_data_size, batch_size, num_epochs,
+                                       num_batches, max_no_of_saves, image_size, attribute_size, noise_size))
+        
 
 def get_images(image_locations, size=[256, 256, 3], base_dir=data_directory):
     """
@@ -77,8 +100,7 @@ def save_output(image_data, input_vector, filename):
         attribute_vector = input_vector[:attribute_size]
         np.savetxt(basename+'.txt', attributes[np.nonzero(attribute_vector)])
 
-        if verbose:
-            print("Saved output to {0}.png , {0}.npy , {0}.txt".format(basename))
+        cprint("Saved output to {0}.png , {0}.npy , {0}.txt".format(basename))
 
     elif len(image_data.shape) == 4:
         for i in range(image_data.shape[0]):
@@ -88,8 +110,7 @@ def save_output(image_data, input_vector, filename):
             with open(basename + '_{}.txt'.format(i), 'w') as f:
                 for j in attributes[np.nonzero(attribute_vector)]:
                     f.write(j[0]+'\n')
-            if verbose:
-                print("Saved output to {0}_{1}.png , {0}_{1}.npy , {0}_{1}.txt".format(basename, i))
+            cprint("Saved output to {0}_{1}.png , {0}_{1}.npy , {0}_{1}.txt".format(basename, i))
 
 
 def load_sun_db(dir_location="./data/sun_db"):

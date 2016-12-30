@@ -8,7 +8,8 @@ class Generator(TFModel):
     """
     Generator network
     """
-    def __init__(self, session=None, nid="g", input_data=None, noise_size=10, output_size=[128, 128, 3], verbose=True, reuse=False):
+    def __init__(self, session=None, nid="g", input_data=None, noise_size=utils.noise_size,
+                 output_size=[128, 128, 3], verbose=True, reuse=False):
         super().__init__(session, nid, input_data, verbose, reuse)
         self.noise_size = noise_size   # noise vector size
         self.attribute_size = utils.attribute_size
@@ -76,7 +77,8 @@ class Generator(TFModel):
                 # conv2d_transpose does not accept variable batch sizes and batch size needs to be explicitly specified
                 # a workaround is to compute it during run-time and pass it with the output_shape
                 # https://github.com/tensorflow/tensorflow/issues/833
-                fsconv = tf.nn.conv2d_transpose(fsconv_input, W, output_shape=[batch_size]+output_shape, strides=[1, 2, 2, 1])
+                fsconv = tf.nn.conv2d_transpose(fsconv_input, W,
+                                                output_shape=[batch_size]+output_shape, strides=[1, 2, 2, 1])
                 fsconv = tf.nn.bias_add(fsconv, b)
                 fsconv = tf.nn.relu(fsconv)     # apply relu layer
                 # store the shape for verbose

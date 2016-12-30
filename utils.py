@@ -17,7 +17,7 @@ learning_rate = 0.001  # ADAM optimizer learning rate
 beta1 = 0.1  # ADAM optimizer beta1
 
 # - dataset parameters
-training_data_size = 100
+training_data_size = 30
 batch_size = 10
 image_size = [64, 64, 3]
 

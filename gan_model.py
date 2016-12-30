@@ -122,8 +122,8 @@ class GANModel(TFModel):
                     print("Training epoch # {} / {}".format(epoch, num_epochs-1))
                 for batch_num in range(0, num_batches):
 
-                    batch_id = epoch*num_batches + batch_num % utils.training_data_size
-                    batch_input = batch_generator(batch_id)
+                    batch_id = epoch*num_batches + batch_num
+                    batch_input = sequential_batch_generator(batch_id)
 
                     if self._verbose:
                         print("Training batch number {}/{}, global batch number {}".format(
@@ -164,24 +164,54 @@ class GANModel(TFModel):
             self._summary_writer.close()
 
 
-def batch_generator(batch_id=0):
+def sequential_batch_generator(batch_id=0):
+    """
+    generates input batches in sequence from the training data set
+    :param batch_id: passing the same batch_id results in same dataset every time
+    :return: batch dataset to be fed to the computational graph
+    """
     batch_input = {'images_s_w': None,
                    'images_s_w_attributes': None,
                    'images_s_r': None,
                    'images_s_r_attributes': None,
                    }
     start = batch_id * utils.batch_size
-    batch_input['images_s_w'] = utils.get_images(utils.images[start:start + utils.batch_size], utils.image_size)
+    start %= utils.training_data_size
+    end = min(start+utils.batch_size, utils.training_data_size)
+    batch_input['images_s_w'] = utils.get_images(utils.images[start:end], utils.image_size)
     batch_input['images_s_w_attributes'] = utils.image_attributes[
                                            np.random.randint(utils.training_data_size, size=utils.batch_size), :]
-    batch_input['images_s_r'] = utils.get_images(utils.images[start:start + utils.batch_size], utils.image_size)
-    batch_input['images_s_r_attributes'] = utils.image_attributes[start: start+utils.batch_size, :]
+    batch_input['images_s_r'] = utils.get_images(utils.images[start:end], utils.image_size)
+    batch_input['images_s_r_attributes'] = utils.image_attributes[start: end, :]
+    return batch_input
+
+
+def random_batch_generator(batch_id=0):
+    """
+    generates input batches randomly from the training data set
+    :param batch_id: ignored, passing the same batch_id may not result in same dataset again
+    :return: batch dataset to be fed to the computational graph
+    """
+    batch_input = {'images_s_w': None,
+                   'images_s_w_attributes': None,
+                   'images_s_r': None,
+                   'images_s_r_attributes': None,
+                   }
+    indices = np.random.randint(low=utils.training_data_size, size=utils.batch_size)
+    batch_input['images_s_w'] = utils.get_images(utils.images[indices], utils.image_size)
+    batch_input['images_s_w_attributes'] = utils.image_attributes[
+                                           np.random.randint(utils.training_data_size, size=utils.batch_size), :]
+    batch_input['images_s_r'] = utils.get_images(utils.images[indices], utils.image_size)
+    batch_input['images_s_r_attributes'] = utils.image_attributes[indices, :]
     return batch_input
 
 
 if __name__ == '__main__':
-    gan = GANModel(image_size=utils.image_size)
-
     # load the dataset into global variables
     utils.load_sun_db(dir_location="./data/sun_db")
-    gan.train(batch_generator, 1, 10)
+
+    # test the random batch generator
+    # batch_input = random_batch_generator(0)
+
+    gan = GANModel(image_size=utils.image_size)
+    gan.train(random_batch_generator, 1, 10)

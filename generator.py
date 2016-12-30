@@ -62,8 +62,10 @@ class Generator(TFModel):
                          for x in range(3, 10) if int(2**x) <= np.min(self.output_size[:2])]
         # set the last output shape to be 3-channeled (or as required by the model)
         output_shapes[-1][2] = self.output_size[2]
-        if self._verbose:
-            print("FSConv layer output shapes - {}".format(output_shapes))
+
+        fsconv_shapes = [fc0_output.get_shape().as_list()]
+
+        batch_size = tf.shape(fsconv_input)[0]  # workaround since conv2d_transpose explicitly needs batch size
 
         # create the intermediate fsconv layers
         for output_shape in output_shapes:
@@ -72,10 +74,18 @@ class Generator(TFModel):
                 W = tf.get_variable("W", initializer=tf.truncated_normal(W_shape, stddev=0.1))
                 b = tf.get_variable("b", shape=output_shape[-1:], initializer=tf.constant_initializer(0.0))
                 # fractionally-strided convolution network
-                fsconv = tf.nn.conv2d_transpose(fsconv_input, W, output_shape=[-1]+output_shape, strides=[1, 2, 2, 1])
+                # conv2d_transpose does not accept variable batch sizes and batch size needs to be explicitly specified
+                # a workaround is to compute it during run-time and pass it with the output_shape
+                # https://github.com/tensorflow/tensorflow/issues/833
+                fsconv = tf.nn.conv2d_transpose(fsconv_input, W, output_shape=[batch_size]+output_shape, strides=[1, 2, 2, 1])
                 fsconv = tf.nn.bias_add(fsconv, b)
                 fsconv = tf.nn.relu(fsconv)     # apply relu layer
+                # store the shape for verbose
+                fsconv_shapes.append(fsconv.get_shape().as_list())
             fsconv_input = fsconv
+
+        if self._verbose:
+            print("FSConv layer output shapes - {}".format(fsconv_shapes))
 
         self._model = fsconv
 
@@ -88,4 +98,5 @@ class Generator(TFModel):
 if __name__ == '__main__':
     # create generator and test some methods
     g = Generator()
-    print(g.generate_samples(10))
+    samples = g.generate_samples(10)
+    print(samples)

@@ -36,10 +36,8 @@ class Discriminator(TFModel):
         # std of the fc0 initializer
         fc0_std = 0.2
 
-        if self._verbose:
-            print("Conv layer output shapes - {}".format(output_shapes))
-
         conv_input = self._input_data
+        conv_shapes = []
 
         # create the conv layers
         for output_shape in output_shapes:
@@ -51,6 +49,8 @@ class Discriminator(TFModel):
                 conv = tf.nn.conv2d(conv_input, W, strides=[1, 2, 2, 1], padding='SAME')
                 conv = tf.nn.bias_add(conv, b)
                 conv = addons.leaky_relu(conv, 0.2)     # apply relu layer
+                # store the shape
+                conv_shapes.append(conv.get_shape().as_list())
             conv_input = conv
 
         # create the final fc layer
@@ -61,6 +61,9 @@ class Discriminator(TFModel):
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
             conv = tf.reshape(conv, [-1, fc0_size])
             fc0_output = tf.nn.bias_add(tf.matmul(conv, W), b)
+
+        if self._verbose:
+            print("Conv layer output shapes - {}".format(conv_shapes+[fc0_output.get_shape().as_list()]))
 
         self._model = fc0_output
 

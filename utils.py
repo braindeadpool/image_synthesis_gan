@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from scipy.misc import imread, imresize
+from scipy.misc import imread, imresize, imsave
 from scipy.io import loadmat
 
 
@@ -9,15 +9,17 @@ from scipy.io import loadmat
 verbose = True  # print all debug messages
 base_directory = os.path.curdir
 data_directory = os.path.join(base_directory, 'data', 'sun_db')
+summary_directory = os.path.join(base_directory, 'summary')
+output_directory = os.path.join(base_directory, 'output')
 
 # - training parameters
 learning_rate = 0.001  # ADAM optimizer learning rate
 beta1 = 0.1  # ADAM optimizer beta1
 
 # - dataset parameters
-training_data_size = 10000
-batch_size = 100
-image_size = [128, 128, 3]
+training_data_size = 100
+batch_size = 10
+image_size = [64, 64, 3]
 
 # - variables for later usage
 attribute_size = 102   # default attribute vector length
@@ -57,6 +59,24 @@ def get_images(image_locations, size=[256, 256, 3], base_dir=data_directory):
     """
     return np.array([imresize(imread(os.path.join(base_dir, image_location[0])), size)
                      for image_location in image_locations])
+
+
+def save_output(image_data, input_vector, filename):
+    """
+    saves the generator output image and the input vector used to generate it
+    :param image_data:
+    :param input_vector:
+    :param filename: filename without extensions
+    :return: filename.png and filename.npy will be saved
+    """
+    basename = os.path.join(output_directory, filename)
+    imsave(basename+'.png', image_data)
+    np.save(basename+'.npy', input_vector)
+    attribute_vector = input_vector[:attribute_size]
+    np.savetxt(basename+'.txt', attributes[np.nonzero(attribute_vector)])
+
+    if verbose:
+        print("Saved output to {0}.png , {0}.npy , {0}.txt".format(basename))
 
 
 def load_sun_db(dir_location="./data/sun_db"):

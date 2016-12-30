@@ -1,5 +1,4 @@
 #!/usr/bin/evn python
-import os
 from generator import *
 from discriminator import *
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -115,7 +114,7 @@ class GANModel(TFModel):
         with self._session as session:
             for epoch in range(0, num_epochs):
                 if self._verbose:
-                    print("Training epoch # {} / {}".format(epoch, num_epochs))
+                    print("Training epoch # {} / {}".format(epoch, num_epochs-1))
                 for batch_num in range(0, num_batches):
 
                     batch_id = epoch*num_batches + batch_num % utils.training_data_size
@@ -123,27 +122,27 @@ class GANModel(TFModel):
 
                     if self._verbose:
                         print("Training batch number {}/{}, global batch number {}".format(
-                            batch_num, num_batches, batch_id))
+                            batch_num, num_batches-1, batch_id))
 
                     # generator input data
                     g_input = self.generate_samples(utils.batch_size)
+                    feed_dict = {self._input_data_s_w: batch_input['images_s_w'],
+                                 self._input_data_s_w_attributes:
+                                     batch_input['images_s_w_attributes'],
+                                 self._input_data_s_r: batch_input['images_s_r'],
+                                 self._input_data_s_r_attributes:
+                                     batch_input['images_s_r_attributes'],
+                                 self._generator.input_data: g_input
+                                 }
                     summary, _ = session.run([self._d_summary,
                                               self._d_optimizer],
-                                             feed_dict={self._input_data_s_w: batch_input['images_s_w'],
-                                                        self._input_data_s_w_attributes:
-                                                        batch_input['images_s_w_attributes'],
-                                                        self._input_data_s_r: batch_input['images_s_r'],
-                                                        self._input_data_s_r_attributes:
-                                                        batch_input['images_s_r_attributes'],
-                                                        self._generator.input_data: g_input
-                                                        })
+                                             feed_dict=feed_dict)
                     self._summary_writer.add_summary(summary, batch_id)
                     if self._verbose:
                         print("Discriminator trained")
 
                     summary, _ = session.run([self._g_summary, self._g_optimizer],
-                                             feed_dict={
-                                                 self._generator.input_data: g_input})
+                                             feed_dict=feed_dict)
                     self._summary_writer.add_summary(summary, batch_id)
                     if self._verbose:
                         print("Generator trained")
@@ -151,8 +150,8 @@ class GANModel(TFModel):
                     g_output = self._generator.eval(g_input)
                     utils.save_output(g_output, 'g_output_{}_{}'.format(epoch, batch_num))
 
-        self._summary_writer.flush()
-        self._summary_writer.close()
+            self._summary_writer.flush()
+            self._summary_writer.close()
 
 
 def batch_generator(batch_id=0):

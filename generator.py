@@ -1,4 +1,4 @@
-#!/usr/bin/evn python
+#!/usr/bin/env python
 import utils
 import numpy as np
 from tfmodel import *

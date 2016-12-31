@@ -1,4 +1,4 @@
-#!/usr/bin/evn python
+#!/usr/bin/env python
 from generator import *
 from discriminator import *
 tf.logging.set_verbosity(tf.logging.INFO)

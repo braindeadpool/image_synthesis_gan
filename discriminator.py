@@ -55,9 +55,9 @@ class Discriminator(TFModel):
 
         # create the final fc layer
         with tf.variable_scope(self.nid+"_fc0", reuse=self._reuse):
-            W = tf.get_variable("W", shape=[fc0_size, utils.attribute_size], dtype=tf.float32,
+            W = tf.get_variable("W", shape=[fc0_size, 1], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
-            b = tf.get_variable("b", shape=[utils.attribute_size], dtype=tf.float32,
+            b = tf.get_variable("b", shape=[1], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
             conv = tf.reshape(conv, [-1, fc0_size])
             fc0_output = tf.nn.bias_add(tf.matmul(conv, W), b)

@@ -82,7 +82,7 @@ def get_images(image_locations, size=[256, 256, 3], base_dir=data_directory):
     :return:
     """
     return np.array([imresize(imread(os.path.join(base_dir, image_location[0]), mode='RGB'), size)
-              for image_location in image_locations])
+                     for image_location in image_locations])
 
 
 def save_output(image_data, input_vector, filename):

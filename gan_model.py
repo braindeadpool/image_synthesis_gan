@@ -50,13 +50,11 @@ class GANModel(TFModel):
         # and the input attribute vector
         # generator/discriminator.model = score for the input passed
         self._s_w = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_w.model,
-                                                                           self._input_data_s_w_attributes))
+                                                                           tf.zeros_like(self._discriminator_w.model)))
         self._s_r = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_r.model,
-                                                                           self._input_data_s_r_attributes))
-        # we slice the input to generator to separate out only the attribute vector component (ie ignore the noise part)
-        self._s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-            self._discriminator_f.model, tf.slice(self._generator.input_data,
-                                                  [0, 0], [-1, self._generator.attribute_size])))
+                                                                           tf.ones_like(self._discriminator_w.model)))
+        self._s_f = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self._discriminator_f.model,
+                                                                           tf.ones_like(self._discriminator_f.model)))
 
         # now define the discriminator and generator losses
         # self._d_loss = tf.log(self._s_r) - (tf.log(self._s_w) + tf.log(self._s_f))/2

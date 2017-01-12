@@ -23,7 +23,13 @@ max_no_of_saves = 1
 # - dataset parameters
 training_data_size = 10000
 batch_size = 20
+# image_size = [64, 64, 3]
 image_size = [128, 128, 3]
+
+# - preprocessing
+zero_center = True
+normalize_std = False
+
 
 # - variables for later usage
 attribute_size = 102   # default attribute vector length
@@ -81,8 +87,15 @@ def get_images(image_locations, size=[256, 256, 3], base_dir=data_directory):
     :param base_dir: the directory relative to which the image locations are specified
     :return:
     """
-    return np.array([imresize(imread(os.path.join(base_dir, image_location[0]), mode='RGB'), size)
-                     for image_location in image_locations])
+    data = []
+    for image_location in image_locations:
+        image = imresize(imread(os.path.join(base_dir, image_location[0]), mode='RGB'), size)
+        if zero_center:
+            image -= np.mean(image)
+        if normalize_std:
+            image /= np.std(image)
+        data.append(image)
+    return np.array(data)
 
 
 def save_output(image_data, input_vector, filename):

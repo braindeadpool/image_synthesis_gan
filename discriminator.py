@@ -10,9 +10,10 @@ class Discriminator(TFModel):
     Discriminator network
     """
 
-    def __init__(self, session=None, nid="d", input_data=None, input_size=[64, 64, 3], verbose=True, reuse=False):
+    def __init__(self, session=None, nid="d", input_data=None, input_attributes = None, input_size=[64, 64, 3], verbose=True, reuse=False):
         super().__init__(session, nid, input_data, verbose, reuse)
         self.input_size = input_size
+        self._input_attributes = input_attributes
         self._build_model()
 
     def _build_model(self):
@@ -53,14 +54,24 @@ class Discriminator(TFModel):
                 conv_shapes.append(conv.get_shape().as_list())
             conv_input = conv
 
+        # From the text to speech gan paper (not used in the final version of this)
+        # if input attributes is provided, spatially merge it with the reshaped conv output
+        # if self._input_attributes is not None:
+        #     batch_size = tf.shape(conv)[0]
+        #     conv = tf.reshape(conv, [batch_size, fc0_size])
+        #     conv = tf.concat(1, [conv, self._input_attributes])
+        #     # now update fc0_size with based on the new conv shape so that the final fc layer is created correctly
+        #     fc0_size += utils.attribute_size
+
         # create the final fc layer
         with tf.variable_scope(self.nid+"_fc0", reuse=self._reuse):
-            W = tf.get_variable("W", shape=[fc0_size, 1], dtype=tf.float32,
+            W = tf.get_variable("W", shape=[fc0_size, utils.attribute_size], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
-            b = tf.get_variable("b", shape=[1], dtype=tf.float32,
+            b = tf.get_variable("b", shape=[utils.attribute_size], dtype=tf.float32,
                                 initializer=tf.random_normal_initializer(stddev=fc0_std))
             conv = tf.reshape(conv, [-1, fc0_size])
             fc0_output = tf.nn.bias_add(tf.matmul(conv, W), b)
+            fc0_output = tf.nn.relu(fc0_output)
 
         if self._verbose:
             print("Conv layer output shapes - {}".format(conv_shapes+[fc0_output.get_shape().as_list()]))
